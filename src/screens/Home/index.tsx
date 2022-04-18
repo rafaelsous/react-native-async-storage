@@ -1,15 +1,43 @@
+import { useAsyncStorage } from '@react-native-async-storage/async-storage';
+import { useFocusEffect } from '@react-navigation/native';
 import { useCallback, useState } from 'react';
 import { FlatList, Text, View } from 'react-native';
-
+import { Button } from '../../components/Button';
 import { Card, CardProps } from '../../components/Card';
 import { HeaderHome } from '../../components/HeaderHome';
-import { useFocusEffect } from '@react-navigation/native';
-
 import { styles } from './styles';
-import { Button } from '../../components/Button';
+
 
 export function Home() {
   const [data, setData] = useState<CardProps[]>([]);
+
+  const { getItem, removeItem, setItem } = useAsyncStorage('@savepass:passwords');
+
+  async function handleFetchData() {
+    const response = await getItem();
+    const responseData = response ? JSON.parse(response) : [];
+
+    setData(responseData);
+  }
+
+  async function handleCleanData() {
+    await removeItem();
+    setData([]);
+  }
+
+  async function handleRemoveItem(id: string) {
+    const response = await getItem();
+    const previousData = response ? JSON.parse(response) : [];
+
+    const data = previousData.filter(item => item.id !== id)
+
+    await setItem(JSON.stringify(data));
+    setData(data);
+  }
+
+  useFocusEffect(useCallback(() => {
+    handleFetchData();
+  }, []));
 
   return (
     <View style={styles.container}>
@@ -33,13 +61,14 @@ export function Home() {
         renderItem={({ item }) =>
           <Card
             data={item}
-            onPress={() => handleRemove(item.id)}
+            onPress={() => handleRemoveItem(item.id)}
           />
         }
       />
 
       <View style={styles.footer}>
         <Button
+          onPress={handleCleanData}
           title="Limpar lista"
         />
       </View>
